@@ -6,7 +6,7 @@
 import json
 import datetime
 import plotme
-import pandas
+import pandas as pd
 
 """
 #time is stored in epochs ['timestamp_ms'] so we have to make it into a date %Y %m %d
@@ -28,20 +28,16 @@ def getMonthName(month): #Returns a string with the month's number
 #thus we check every message in the list, we could do this in conjuction with another function but oh well?
 def getParticipants():
     """ @return: list with participants """
-    participantsList = []
-    for m in messagesList:
-        if (m['sender_name'] not in participantsList):
-            participantsList.append(m['sender_name'])
-    return participantsList
+    return df.sender.unique()
 
 #@returns the length of the messagesList since it's already been sanitized and filtered to only contain messages
 def getTotalMessages():
     '''@returns the length of the messagesList since it's already been sanitized and filtered to only contain messages'''
-    return len(messagesList)
+    return len(df)
 
 #@returns the days attribute of @global variable 'diff' which is set at the loadfile() function at the bottom 
 def getSpanOfConversation():
-    return str(diff.days+1) + " days"
+    return str(diff.days+1) + " days" # TODO: Find where this is
 
 #@returns a dict { participantName : value }
 #create a dict with keys the participants through the pList and assign 0 to it
@@ -49,7 +45,6 @@ def getSpanOfConversation():
 #@bool includeTotal is used to have a 3rd element total that holds all messages
 def getTotalMessagesPerParticipant(includeTotal):
     theDict = dict.fromkeys(participantsList,0)
-    total = 0
     for m in messagesList:
         theDict[m['sender_name']] += 1
     if(includeTotal == True):
@@ -482,9 +477,9 @@ def saveAll(filename):
 def getDataframe(chat):
     '''
         @chat: String with all the chat information
-        @returns: Pandas Dataframe with the split information in three columns timestamp - Sender - Message
+        @returns: Pandas Dataframe with the split information in three columns timestamp - sender - msg
     '''
-    pass
+    return pd.Dataframe({'timestamp' : [], 'sender': [], 'msg': []})
 
 #****************START****************#
 from os import listdir
@@ -512,6 +507,7 @@ if (chat is None ):
 
 # Get pandas
 df = getDataframe(chat)
+
 
 participantsList = getParticipants()
 sdate = getDateFromTimestamp(messagesList[0]['timestamp_ms'])

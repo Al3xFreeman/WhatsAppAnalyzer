@@ -27,6 +27,7 @@ def getMonthName(month): #Returns a string with the month's number
 #@WHY while there is a 'participants' field it does not account for if someone was in the conversation but has since left
 #thus we check every message in the list, we could do this in conjuction with another function but oh well?
 def getParticipants():
+    """ @return: list with participants """
     participantsList = []
     for m in messagesList:
         if (m['sender_name'] not in participantsList):
@@ -34,7 +35,8 @@ def getParticipants():
     return participantsList
 
 #@returns the length of the messagesList since it's already been sanitized and filtered to only contain messages
-def getTotalMessages(): 
+def getTotalMessages():
+    '''@returns the length of the messagesList since it's already been sanitized and filtered to only contain messages'''
     return len(messagesList)
 
 #@returns the days attribute of @global variable 'diff' which is set at the loadfile() function at the bottom 
@@ -477,6 +479,13 @@ def saveAll(filename):
     print("----- saving took "+str(round(ltime-stime,2))+" seconds to complete -----")
     return None
 
+def getDataframe(chat):
+    '''
+        @chat: String with all the chat information
+        @returns: Pandas Dataframe with the split information in three columns timestamp - Sender - Message
+    '''
+    pass
+
 #****************START****************#
 from os import listdir
 import time
@@ -484,14 +493,11 @@ import time
 custom = None
 def loadFile():
     ''' @return: A string with the load file of the chat'''
-    chat = ""
-    global custom 
-    custom = input('\nEnter the text file with the Whatsapp chat, please :)\n>> ')
+    global input_file 
+    input_file = input('\nEnter the text file with the Whatsapp chat, please :)\n>> ')
     try:
-        stime = time.time()
         f = open(custom, encoding='utf-8')
         chat = f.read()
-        print('\n---- loading took %s seconds to complete ----' %(time.time() - stime))
         f.close()
         return chat
     except OSError:
@@ -500,16 +506,13 @@ def loadFile():
         print("File Not Found not found!")
         return loadFile()
 
-messagesList = loadFile()
-if (messagesList is None ):
-    exit()
-print(messagesList)
-if (messagesList == True):
-    print("Thank you for using this thing!")
+chat = loadFile()
+if (chat is None ):
     exit()
 
-messagesList.reverse() #the JSON files are newest first, we reverse the list to go from first to last sequentially later
-messagesFile = None
+# Get pandas
+df = getDataframe(chat)
+
 participantsList = getParticipants()
 sdate = getDateFromTimestamp(messagesList[0]['timestamp_ms'])
 ldate = getDateFromTimestamp(messagesList[len(messagesList)-1]['timestamp_ms'])

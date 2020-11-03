@@ -479,10 +479,11 @@ def saveAll(filename):
 #****************START****************#
 from os import listdir
 import time
-messagesList = False
+messages = ""
 custom = None
 def loadFile():
-    messagesList = []
+    ''' @return: A string with the load file of the chat'''
+    message = ""
     global custom 
     custom = input('\nEnter the name of the folder in the MessagesSources folder containing the json files\nType "dir" to show list of folders in sources\nType "exit" to exit\n')
     if custom.upper() =="DIR":

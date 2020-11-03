@@ -479,34 +479,26 @@ def saveAll(filename):
 #****************START****************#
 from os import listdir
 import time
-messages = ""
+
 custom = None
 def loadFile():
     ''' @return: A string with the load file of the chat'''
-    message = ""
+    chat = ""
     global custom 
-    custom = input('\nEnter the name of the folder in the MessagesSources folder containing the json files\nType "dir" to show list of folders in sources\nType "exit" to exit\n')
-    if custom.upper() =="DIR":
-        print('\nFOLDERS:')
-        for folder in listdir('./MessagesSources/'):
-            print(folder)
-        return loadFile()
-    if custom.upper() == 'EXIT':
-        return True
-    dir = r'./MessagesSources/' + custom +'/'
+    custom = input('\nEnter the text file with the Whatsapp chat, please :)\n>> ')
     try:
         stime = time.time()
-        for i in range(1,len(listdir(dir))+1):
-            with open (dir+'message_'+str(i)+'.json', 'r',encoding="utf-8") as f:
-                messagesFile = json.load(f) 
-                messagesList += dictToList(messagesFile) #Creating a list containg only the messages 
+        f = open(custom, encoding='utf-8')
+        chat = f.read()
         print('\n---- loading took %s seconds to complete ----' %(time.time() - stime))
-        return messagesList
-    except:
-        print("Folder not found!")
+        f.close()
+        return chat
+    except OSError:
+        print("File Not Found not found!")
         return loadFile()
 
 messagesList = loadFile()
+print(messagesList)
 if (messagesList == True):
     print("Thank you for using this thing!")
     exit()

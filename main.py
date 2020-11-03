@@ -6,6 +6,7 @@
 import json
 import datetime
 import plotme
+import pandas
 
 """
 #time is stored in epochs ['timestamp_ms'] so we have to make it into a date %Y %m %d

@@ -494,10 +494,14 @@ def loadFile():
         f.close()
         return chat
     except OSError:
+        if (custom == "exit"):
+            return
         print("File Not Found not found!")
         return loadFile()
 
 messagesList = loadFile()
+if (messagesList is None ):
+    exit()
 print(messagesList)
 if (messagesList == True):
     print("Thank you for using this thing!")

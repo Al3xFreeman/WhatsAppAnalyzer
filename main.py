@@ -18,7 +18,7 @@ import re
     .day
 """
 def getDateFromTimestamp(timestamp): 
-    return datetime.datetime.fromtimestamp(float(timestamp)/1e3)
+    return datetime.datetime.strptime(timestamp, '%b/%d/%Y, %I:%M')
 
 #helper function for the other 2 functions that have to do with month data
 def getMonthName(month): #Returns a string with the month's number
@@ -47,10 +47,8 @@ def getSpanOfConversation():
 #@bool includeTotal is used to have a 3rd element total that holds all messages
 def getTotalMessagesPerParticipant(includeTotal):
     theDict = dict.fromkeys(participantsList,0)
-    for m in messagesList:
-        theDict[m['sender_name']] += 1
-    if(includeTotal == True):
-        theDict.update({'Total' : len(messagesList)})
+    for k in participantsList:
+        theDict[k] = len(df.loc[df['sender'] == k])
     return theDict
 
 #@argument 'this' is the return of the getMessagesPerMonth() function
@@ -489,8 +487,7 @@ def saveAll(filename):
 # This may cause a bit of trouble in the future, the optimal solution would be to leave this message with no author and then check for the one who sent 
 # the previous message and assign it to the later message
 def adaptData(chat):
-    adaptedData = re.split('\n?\d{1,2}/\d{1,2}/\d{1,2}', chat)
-    adaptedData = map(lambda x: x.split )
+    adaptedData = re.split('\n\d{1,2}/\d{1,2}/\d{1,2}', chat)
     return adaptedData
 
 
@@ -499,13 +496,21 @@ def getDataframe(chat):
         @chat: String with all the chat information
         @returns: Pandas Dataframe with the split information in three columns timestamp - sender - msg
     '''
+    # TODO: Filter msgs
+    lines = chat.split(sep='\n')
+    #second = list(filter(lambda x: ':' in x.split(sep='-', maxsplit=1)[1], lines))
+    #print(second[0])
+    print(lines[0].split(sep='-', maxsplit=1))
+    timestamp = list(map(lambda x: x.split(sep='-', maxsplit=1)[0], lines))
+    #sender = list(map(lambda x: x.split(sep='-', maxsplit=1)[1].split(sep=':', maxsplit=1)[0], lines))
+    print(timestamp[0])
 
-
-    return pd.DataFrame({'timestamp' : [], 'sender': [], 'msg': []})
+    return pd.DataFrame({'timestamp' : ['1/30/18, 1:00', '1/30/18, 1:03'], 'sender': ['Vozka', 'Pablo'], 'msg': ['Vienes al metro?', 'Bajo en 1 minuto']})
 
 #****************START****************#
 from os import listdir
 import time
+from pars import lexer
 
 custom = None
 def loadFile():
@@ -523,7 +528,9 @@ def loadFile():
         print("File Not Found not found!")
         return loadFile()
 
+#chat = loadFile()
 chat = loadFile()
+
 if (chat is None ):
     exit()
 
@@ -536,81 +543,82 @@ df = getDataframe(chat)
 
 
 participantsList = getParticipants()
-sdate = getDateFromTimestamp(messagesList[0]['timestamp_ms'])
-ldate = getDateFromTimestamp(messagesList[len(messagesList)-1]['timestamp_ms'])
+sdate = getDateFromTimestamp(df.iloc[0]['timestamp'])
+print(sdate)
+ldate = getDateFromTimestamp(df.iloc[-1]['timestamp'])
 diff = ldate - sdate
-value = -1
-while (value != 6):
-    value = input("\n1. Line Graphs\n2. Bar Graphs\n3. Radar Graphs\n4. Save all to txt\n5. Change loading folder\n6. Exit\n")
-    value = int(value)
+# value = -1
+# while (value != 6):
+#     value = input("\n1. Line Graphs\n2. Bar Graphs\n3. Radar Graphs\n4. Save all to txt\n5. Change loading folder\n6. Exit\n")
+#     value = int(value)
     
-    if (value==1):
-        svalue = int(input('''1. Messages Per Day\n2. Messages Per Day Per Participant\n3. Messages Per Day with Keywords
-4. Messages Per Month\n5. Response Time Per Message\n'''))
-        if (svalue==1):
-            plotme.plotLineGraph_MessagesPerDay(getMessagesPerDay())
-        elif(svalue==2):
-            lvalue = int(input("1. One graph\n2. Separate\n"))
-            if (lvalue==1):
-                plotme.plotLineGraph_MessagesPerDayPerParticipant(getMessagesPerDayPerParticipant(), participantsList, False)
-            elif (lvalue==2):
-                plotme.plotLineGraph_MessagesPerDayPerParticipant(getMessagesPerDayPerParticipant(), participantsList, True)
+#     if (value==1):
+#         svalue = int(input('''1. Messages Per Day\n2. Messages Per Day Per Participant\n3. Messages Per Day with Keywords
+# 4. Messages Per Month\n5. Response Time Per Message\n'''))
+#         if (svalue==1):
+#             plotme.plotLineGraph_MessagesPerDay(getMessagesPerDay())
+#         elif(svalue==2):
+#             lvalue = int(input("1. One graph\n2. Separate\n"))
+#             if (lvalue==1):
+#                 plotme.plotLineGraph_MessagesPerDayPerParticipant(getMessagesPerDayPerParticipant(), participantsList, False)
+#             elif (lvalue==2):
+#                 plotme.plotLineGraph_MessagesPerDayPerParticipant(getMessagesPerDayPerParticipant(), participantsList, True)
         
-        elif(svalue==3):
-            keywords = input("Enter the words you want to find with commas ',' (ex. 'bro','boi'):\n")
-            keywords = keywords.replace(" ", "").split(',')
-            plotme.plotLineGraph_MessagesPerDay(getMessagesPerDay(words=keywords),keywords) 
+#         elif(svalue==3):
+#             keywords = input("Enter the words you want to find with commas ',' (ex. 'bro','boi'):\n")
+#             keywords = keywords.replace(" ", "").split(',')
+#             plotme.plotLineGraph_MessagesPerDay(getMessagesPerDay(words=keywords),keywords) 
 
-        elif(svalue==4):
-            plotme.plotLineGraph_MessagesPerMonth(getMessagesPerMonth())
+#         elif(svalue==4):
+#             plotme.plotLineGraph_MessagesPerMonth(getMessagesPerMonth())
         
-        elif(svalue==5):
-            lvalue = int(input("Time representation:\n1. Seconds\n2. Minutes\n3. Hours"))
-            if (lvalue==1):
-                plotme.plotLineGraph_TimeOfResponsePerMessage(getReponseTimePerMessage())
-            elif (lvalue==2):
-                plotme.plotLineGraph_TimeOfResponsePerMessage(getReponseTimePerMessage(time='Minutes'),time='Minutes')
-            elif (lvalue==3):
-                plotme.plotLineGraph_TimeOfResponsePerMessage(getReponseTimePerMessage(time='Hours'),time='Hours')
+#         elif(svalue==5):
+#             lvalue = int(input("Time representation:\n1. Seconds\n2. Minutes\n3. Hours"))
+#             if (lvalue==1):
+#                 plotme.plotLineGraph_TimeOfResponsePerMessage(getReponseTimePerMessage())
+#             elif (lvalue==2):
+#                 plotme.plotLineGraph_TimeOfResponsePerMessage(getReponseTimePerMessage(time='Minutes'),time='Minutes')
+#             elif (lvalue==3):
+#                 plotme.plotLineGraph_TimeOfResponsePerMessage(getReponseTimePerMessage(time='Hours'),time='Hours')
 
-    elif (value==2):
-        svalue = int(input('''1. Messages Per Month\n2. Messages Per Month Per Participant\n3. Total Messages Per Participant
-4. Average Words Per Message Per Month\n5. Average Response Time Per Month\n'''))
-        if (svalue==1):
-            plotme.plotBarGraph_MessagesPerMonth(getMessagesPerMonth())
-        elif (svalue==2):
-            plotme.plotBarGraph_MessagesPerMonthPerParticipant(getMessagesPerMonthPerParticipant(),participantsList)
-        elif (svalue==3):
-            plotme.plotBarGraph_TotalMessages_PerParticipant(getTotalMessagesPerParticipant(True))
-        elif (svalue==4):
-            plotme.plotBarGraph_AveragePerMonth_General(getAverageWordsPerMessagePerMonth(),title='Words Per Message')
-        elif (svalue==5):
-            lvalue=int(input("Time Representation:\n1. Seconds\n2. Minutes\n3. Hours\n"))
-            timeR = 'Minutes' if lvalue==2 else 'Hours' if lvalue == 3 else 'Seconds'
-            plotme.plotBarGraph_MessagesPerMonth(getAverageResponseTimePerMonth(time=timeR),title='Average Response Time',time=timeR)
-    elif (value==3): 
-        svalue = int(input("1. Messages Per Day of the Week\n2. Messages Per Time of Day\n"))
-        if (svalue == 1):
-            plotme.plotSpiderGraph(getMessagesPerDayOfTheWeek())
-        elif (svalue == 2): 
-            plotme.plotSpiderGraph(getMessagesPerTimeOfDay())
-    elif(value==4):
-        saveAll(custom)
+#     elif (value==2):
+#         svalue = int(input('''1. Messages Per Month\n2. Messages Per Month Per Participant\n3. Total Messages Per Participant
+# 4. Average Words Per Message Per Month\n5. Average Response Time Per Month\n'''))
+#         if (svalue==1):
+#             plotme.plotBarGraph_MessagesPerMonth(getMessagesPerMonth())
+#         elif (svalue==2):
+#             plotme.plotBarGraph_MessagesPerMonthPerParticipant(getMessagesPerMonthPerParticipant(),participantsList)
+#         elif (svalue==3):
+#             plotme.plotBarGraph_TotalMessages_PerParticipant(getTotalMessagesPerParticipant(True))
+#         elif (svalue==4):
+#             plotme.plotBarGraph_AveragePerMonth_General(getAverageWordsPerMessagePerMonth(),title='Words Per Message')
+#         elif (svalue==5):
+#             lvalue=int(input("Time Representation:\n1. Seconds\n2. Minutes\n3. Hours\n"))
+#             timeR = 'Minutes' if lvalue==2 else 'Hours' if lvalue == 3 else 'Seconds'
+#             plotme.plotBarGraph_MessagesPerMonth(getAverageResponseTimePerMonth(time=timeR),title='Average Response Time',time=timeR)
+#     elif (value==3): 
+#         svalue = int(input("1. Messages Per Day of the Week\n2. Messages Per Time of Day\n"))
+#         if (svalue == 1):
+#             plotme.plotSpiderGraph(getMessagesPerDayOfTheWeek())
+#         elif (svalue == 2): 
+#             plotme.plotSpiderGraph(getMessagesPerTimeOfDay())
+#     elif(value==4):
+#         saveAll(custom)
 
-    elif (value==5): #yeah this is the way I found to return back, sue me. or maybe don't idk how the licensing for this will work yet
-        messagesList = False
-        while(messagesList == False):
-            messagesList = loadFile()
-            if (messagesList == True):
-                print("Thank you for using this thing!")
-                exit()
-            messagesList.reverse() #the JSON files are newest first, we reverse the list to go from first to last sequentially later
-            messagesFile = None
-            participantsList = getParticipants()
-            sdate = getDateFromTimestamp(messagesList[0]['timestamp_ms'])
-            ldate = getDateFromTimestamp(messagesList[len(messagesList)-1]['timestamp_ms'])
-            diff = ldate - sdate
-            value = -1
-    else:
-        print('Thank you for using this thing! :)')
-        exit()
+#     elif (value==5): #yeah this is the way I found to return back, sue me. or maybe don't idk how the licensing for this will work yet
+#         messagesList = False
+#         while(messagesList == False):
+#             messagesList = loadFile()
+#             if (messagesList == True):
+#                 print("Thank you for using this thing!")
+#                 exit()
+#             messagesList.reverse() #the JSON files are newest first, we reverse the list to go from first to last sequentially later
+#             messagesFile = None
+#             participantsList = getParticipants()
+#             sdate = getDateFromTimestamp(messagesList[0]['timestamp_ms'])
+#             ldate = getDateFromTimestamp(messagesList[len(messagesList)-1]['timestamp_ms'])
+#             diff = ldate - sdate
+#             value = -1
+#     else:
+#         print('Thank you for using this thing! :)')
+#         exit()

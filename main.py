@@ -497,15 +497,13 @@ def getDataframe(chat):
         @returns: Pandas Dataframe with the split information in three columns timestamp - sender - msg
     '''
     # TODO: Filter msgs
-    lines = chat.split(sep='\n')
-    #second = list(filter(lambda x: ':' in x.split(sep='-', maxsplit=1)[1], lines))
-    #print(second[0])
-    print(lines[0].split(sep='-', maxsplit=1))
-    timestamp = list(map(lambda x: x.split(sep='-', maxsplit=1)[0], lines))
-    #sender = list(map(lambda x: x.split(sep='-', maxsplit=1)[1].split(sep=':', maxsplit=1)[0], lines))
-    print(timestamp[0])
+    timespan, rest = adaptData(chat)
+    timestamp = list(map(lambda x: x[1:-3], timespan))
+    user = list(map(lambda x: x.split(sep=':', maxsplit=1)[0], rest))
+    msg = list(map(lambda x: x.split(sep=':', maxsplit=1)[1], rest))
 
-    return pd.DataFrame({'timestamp' : ['1/30/18, 1:00', '1/30/18, 1:03'], 'sender': ['Vozka', 'Pablo'], 'msg': ['Vienes al metro?', 'Bajo en 1 minuto']})
+
+    return pd.DataFrame({'timestamp' : timespan, 'sender': user, 'msg': msg})
 
 #****************START****************#
 from os import listdir

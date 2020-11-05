@@ -7,6 +7,8 @@ import json
 import datetime
 import plotme
 import pandas as pd
+from itertools import takewhile
+import re
 
 """
 #time is stored in epochs ['timestamp_ms'] so we have to make it into a date %Y %m %d
@@ -474,12 +476,31 @@ def saveAll(filename):
     print("----- saving took "+str(round(ltime-stime,2))+" seconds to complete -----")
     return None
 
+# Adapts the data downloadad from WhatsApp to be more easily treated afterwards
+# With regex it will detect any line break followed by a data (with the format provided by WhatsApp), that will consititute one full message
+# The is a way for this to be "hacked", if one of the users ahs sent a message with with that the date format after a line break, that message will despite
+# being part of anotherone will be registered as a separate message.
+
+# example of the message mentioned: 
+# (date format) - Person1: Start of the message \n(date format) The message continues\n
+# 
+# In this case "Start of the message" will be identified as one message and "The sessage continues" as another separate one
+
+# This may cause a bit of trouble in the future, the optimal solution would be to leave this message with no author and then check for the one who sent 
+# the previous message and assign it to the later message
+def adaptData(chat):
+    adaptedData = re.split('\n\d{1,2}/\d{1,2}/\d{1,2}', chat)
+    return adaptedData
+
+
 def getDataframe(chat):
     '''
         @chat: String with all the chat information
         @returns: Pandas Dataframe with the split information in three columns timestamp - sender - msg
     '''
-    return pd.Dataframe({'timestamp' : [], 'sender': [], 'msg': []})
+
+
+    return pd.DataFrame({'timestamp' : [], 'sender': [], 'msg': []})
 
 #****************START****************#
 from os import listdir
@@ -491,7 +512,7 @@ def loadFile():
     global input_file 
     input_file = input('\nEnter the text file with the Whatsapp chat, please :)\n>> ')
     try:
-        f = open(custom, encoding='utf-8')
+        f = open(input_file, encoding='utf-8')
         chat = f.read()
         f.close()
         return chat
@@ -505,8 +526,11 @@ chat = loadFile()
 if (chat is None ):
     exit()
 
+p1 = adaptData(chat)
+
 # Get pandas
 df = getDataframe(chat)
+
 
 
 participantsList = getParticipants()

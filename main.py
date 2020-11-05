@@ -487,9 +487,9 @@ def saveAll(filename):
 # This may cause a bit of trouble in the future, the optimal solution would be to leave this message with no author and then check for the one who sent 
 # the previous message and assign it to the later message
 def adaptData(chat):
-    adaptedData = re.split('\n\d{1,2}/\d{1,2}/\d{1,2}', chat)
-    return adaptedData
+    adaptedData = re.split('(\n\d{1,2}/\d{1,2}/\d{1,2}\s\d{1,2}:\d{1,2}\s-\s)', chat)
 
+    return (adaptedData[1::2], adaptedData[2::2])
 
 def getDataframe(chat):
     '''
@@ -528,15 +528,12 @@ def loadFile():
         print("File Not Found not found!")
         return loadFile()
 
-#chat = loadFile()
-chat = loadFile()
+chat = "\n" +loadFile()
 
 if (chat is None ):
     exit()
 
 p1 = adaptData(chat)
-print(p1[0:3])
-
 # Get pandas
 df = getDataframe(chat)
 

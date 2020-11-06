@@ -17,12 +17,12 @@ import re
     .month
     .day
 """
+    months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 def getDateFromTimestamp(timestamp): 
-    return datetime.datetime.strptime(timestamp, '%b/%d/%Y, %I:%M')
+    return datetime.datetime.strptime(timestamp, '%d/%b/%Y %I:%M')
 
 #helper function for the other 2 functions that have to do with month data
 def getMonthName(month): #Returns a string with the month's number
-    months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
     return months[month-1]
 
 #@returns a list of the names of the participants
@@ -505,7 +505,7 @@ def getDataframe(chat):
             timespan.append(timespan_aux[i])
             rest.append(rest_aux[i])
     timespan = list(map(lambda x: x[1:-3], timespan))
-    user = list(map(lambda x: re.split('(\w+):', x), rest))
+    user = list(map(lambda x: re.split('(\w+):', x)[1], rest))
     msg = list(map(lambda x: x.split(sep=':', maxsplit=1)[1], rest))
 
 
@@ -540,6 +540,7 @@ if (chat is None ):
 p1 = adaptData(chat)
 # Get pandas
 df = getDataframe(chat)
+print(df.head())
 
 
 

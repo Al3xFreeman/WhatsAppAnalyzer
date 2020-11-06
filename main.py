@@ -17,12 +17,12 @@ import re
     .month
     .day
 """
-    months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 def getDateFromTimestamp(timestamp): 
-    return datetime.datetime.strptime(timestamp, '%d/%b/%Y %I:%M')
+    return datetime.datetime.strptime(timestamp, '%b/%d/%Y %I:%M')
 
 #helper function for the other 2 functions that have to do with month data
 def getMonthName(month): #Returns a string with the month's number
+    months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
     return months[month-1]
 
 #@returns a list of the names of the participants

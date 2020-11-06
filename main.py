@@ -18,7 +18,7 @@ import re
     .day
 """
 def getDateFromTimestamp(timestamp): 
-    return datetime.datetime.strptime(timestamp, '%b/%d/%Y %I:%M')
+    return datetime.datetime.strptime(timestamp, '%d/%m/%y %H:%M')
 
 #helper function for the other 2 functions that have to do with month data
 def getMonthName(month): #Returns a string with the month's number
@@ -537,7 +537,6 @@ chat = "\n" +loadFile()
 if (chat is None ):
     exit()
 
-p1 = adaptData(chat)
 # Get pandas
 df = getDataframe(chat)
 print(df.head())
@@ -546,7 +545,6 @@ print(df.head())
 
 participantsList = getParticipants()
 sdate = getDateFromTimestamp(df.iloc[0]['timestamp'])
-print(sdate)
 ldate = getDateFromTimestamp(df.iloc[-1]['timestamp'])
 diff = ldate - sdate
 # value = -1

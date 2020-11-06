@@ -11,7 +11,7 @@ from itertools import takewhile
 import re
 
 """
-#time is stored in epochs ['timestamp_ms'] so we have to make it into a date %Y %m %d
+#time is stored in epochs ['timestamp'] so we have to make it into a date %Y %m %d
 @returns a datetime.datetime object of which values can be accessed like
     .year
     .month
@@ -30,7 +30,7 @@ def getMonthName(month): #Returns a string with the month's number
 #thus we check every message in the list, we could do this in conjuction with another function but oh well?
 def getParticipants():
     """ @return: list with participants """
-    return df.sender.unique()
+    return list(df.sender.unique())
 
 #@returns the length of the messagesList since it's already been sanitized and filtered to only contain messages
 def getTotalMessages():
@@ -39,7 +39,7 @@ def getTotalMessages():
 
 #@returns the days attribute of @global variable 'diff' which is set at the loadfile() function at the bottom 
 def getSpanOfConversation():
-    return str(diff.days+1) + " days" # TODO: Find where this is
+    return str(diff.days+1) + " days"
 
 #@returns a dict { participantName : value }
 #create a dict with keys the participants through the pList and assign 0 to it
@@ -55,6 +55,8 @@ def getTotalMessagesPerParticipant(includeTotal):
 #@why? because we could order the dict in the perMonth function but then the data wouldn't be useful for plotting
 #@returns a tuple (str, str) with the month's name and message value
 def getMonthWithMostMessages(this):
+    # Possible solution
+    # max(stats, key=stats.get)
     maxV = 0
     maxM = None
     for k,v in this.items():
@@ -67,8 +69,8 @@ def getMonthWithMostMessages(this):
 #ex { 2020 February : 2469}
 def getMessagesPerMonth():
     perMonthDict = dict()
-    for m in messagesList:
-        date = getDateFromTimestamp(m['timestamp_ms'])
+    for _,m in df.iterrows():
+        date = getDateFromTimestamp(m['timestamp'])
         key = str(date.year) +' '+ str(getMonthName(date.month)) #'2020 February'
         perMonthDict.update({key : 1 }) if key not in perMonthDict else perMonthDict.update({key : perMonthDict[key] + 1}) #{2020 February : 2469}
     return perMonthDict
@@ -84,10 +86,10 @@ def getMessagesPerMonthPerParticipant():
     theDict = {k:{} for (k,v) in getMessagesPerMonth().items()}
     for k in theDict:
         theDict[k].update({k:0 for k in participantsList})
-    for m in messagesList:
-        date = getDateFromTimestamp(m['timestamp_ms'])
+    for _, m in df.iterrows():
+        date = getDateFromTimestamp(m['timestamp'])
         key = str(date.year) +' '+ str(getMonthName(date.month))
-        p = m['sender_name']
+        p = m['sender']
         theDict[key][p] += 1
     return theDict
 
@@ -102,8 +104,8 @@ def getMessagesPerDay(**kwargs):
         day = sdate + timedelta(days=i)
         theDict[day.strftime('%Y %m %d')] = 0
 
-    for m in messagesList:
-        currentDay = getDateFromTimestamp(m['timestamp_ms']).strftime('%Y %m %d')
+    for _,m in df.iterrows():
+        currentDay = getDateFromTimestamp(m['timestamp']).strftime('%Y %m %d')
         if (keywords == False):
             theDict[currentDay] += 1
         else: #this loop is used if you want to look for specific words in each message
@@ -125,9 +127,9 @@ def getMessagesPerDayPerParticipant():
     for i in range (diff.days+2): #should be days+1 as days+2 sometimes creates an extra day. This is a problem because of the difference in the time of day the first and last message were sent resulting in incorrect .days
         day = sdate + timedelta(days=i)
         theDict[day.strftime('%Y %m %d')] = dict.fromkeys(participantsList, 0)
-    for m in messagesList:
-        currentDay = getDateFromTimestamp(m['timestamp_ms']).strftime('%Y %m %d')
-        theDict[currentDay][m['sender_name']] += 1
+    for _, m in df.iterrows():
+        currentDay = getDateFromTimestamp(m['timestamp']).strftime('%Y %m %d')
+        theDict[currentDay][m['sender']] += 1
     return theDict
 
 #@returns a list of ints that represent the seconds between the last message of a participant and the first of another
@@ -144,11 +146,11 @@ def getReponseTimePerMessage(**kwargs):
     times = {'Seconds':1, 'Minutes' : 60, 'Hours' : 3600}
     divisor = times[kwargs['time']] if len(kwargs) > 0 else 1
     myl = []
-    for i in range(1,len(messagesList)):
-        prev = messagesList[i-1]
-        m = messagesList[i]
-        if (m['sender_name'] != prev['sender_name']):
-            difference = getDateFromTimestamp(m['timestamp_ms']) - getDateFromTimestamp(prev['timestamp_ms'])
+    for i in range(1,len(df)):
+        prev = df.iloc[i-1]
+        m = df.iloc[i]
+        if (m['sender'] != prev['sender']):
+            difference = getDateFromTimestamp(m['timestamp']) - getDateFromTimestamp(prev['timestamp'])
             myl.append(difference.total_seconds()//divisor)
     return myl
 
@@ -163,14 +165,14 @@ def getGlobalAverageResponseTimePerParticipant(**kwargs):
     #the list then it's considered a response to that message.
     #@caution in group conversations where multiple people respond to a message sent by one it's difficult
     #to filter out, there would need to be context awareness which is beyond the scope of this 'project'
-    for i in range(0,len(messagesList)-1):
-        current = messagesList[i]
-        nuxt = messagesList[i+1]
-        if (current['sender_name'] != nuxt['sender_name']):
-            difference = getDateFromTimestamp(nuxt ['timestamp_ms']) - getDateFromTimestamp(current['timestamp_ms'])
+    for i in range(0,len(df)-1):
+        current = df.iloc[i]
+        nuxt = df.iloc[i+1]
+        if (current['sender'] != nuxt['sender']):
+            difference = getDateFromTimestamp(nuxt ['timestamp']) - getDateFromTimestamp(current['timestamp'])
             diffInSeconds = difference.total_seconds()
-            valuesList[participantsList.index(nuxt['sender_name'])] += diffInSeconds
-            theDict[nuxt['sender_name']]+=1
+            valuesList[participantsList.index(nuxt['sender'])] += diffInSeconds
+            theDict[nuxt['sender']]+=1
 
     for k,v in theDict.items():
         theDict[k] = round(valuesList[participantsList.index(k)] / v,2) // divisor
@@ -186,12 +188,12 @@ def getAverageResponseTimePerMonth(**kwargs):
     divisor = times[kwargs['time']] if len(kwargs) > 0 else 1
     perMonthDict = dict() #@holds all the months as keys and the values will be the totalSeconds / totalMessages
     valuesList = [] #@holds the total seconds between responses for every message in a given month
-    for i in range(0,len(messagesList)-1):
-        current = messagesList[i]
-        nuxt = messagesList[i+1]
-        if (current['sender_name'] != nuxt['sender_name']):
-            date = getDateFromTimestamp(nuxt['timestamp_ms'])
-            difference = date - getDateFromTimestamp(current['timestamp_ms'])
+    for i in range(0,len(df)-1):
+        current = df.iloc[i]
+        nuxt = df.iloc[i+1]
+        if (current['sender'] != nuxt['sender']):
+            date = getDateFromTimestamp(nuxt['timestamp'])
+            difference = date - getDateFromTimestamp(current['timestamp'])
             key = str(date.year) + ' ' + str(getMonthName(date.month))
             if key not in perMonthDict: #this means we've entered a new month and must initialize a new element in the array
                 perMonthDict[key] = 1 
@@ -210,16 +212,16 @@ def getAverageResponseTimePerMonth(**kwargs):
 def getMessagesPerDayOfTheWeek():
     weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     weekDict = dict.fromkeys(weekdays,0)
-    for m in messagesList:
-        weekDict[weekdays[getDateFromTimestamp(m['timestamp_ms']).weekday()]] += 1
+    for _, m in df.iterrows():
+        weekDict[weekdays[getDateFromTimestamp(m['timestamp']).weekday()]] += 1
     return weekDict
 
 #@returns a dict  { time : value } where key is the hour (13:34 is 13) and value the messages of both participants at that time 
 def getMessagesPerTimeOfDay():
     timeList = [i for i in range(24)]
     timeDict = dict.fromkeys(timeList,0)
-    for m in messagesList:
-        timeDict[getDateFromTimestamp(m['timestamp_ms']).hour] += 1
+    for _, m in df.iterrows():
+        timeDict[getDateFromTimestamp(m['timestamp']).hour] += 1
     return timeDict
 
 #returns a float
@@ -227,7 +229,7 @@ def getMessagesPerTimeOfDay():
 def getAverageWordsPerMessage():
     wordCount = 0
     ammount = 0
-    for m in messagesList:
+    for _, m in df.iterrows():
         if 'content' in m.keys(): #to filter the messages that have text and not photos, audio etc.
             words = m['content'].split()
             wordCount += len(words)
@@ -237,11 +239,11 @@ def getAverageWordsPerMessage():
 #@returns a dict {k:v with k:month name v:totalwordsPMonth / totalmessagesPMonth}
 def getAverageWordsPerMessagePerMonth():
     perMonthDict = dict()#holds the ammount of words for each month
-    prevMonth = getDateFromTimestamp(messagesList[0]['timestamp_ms']).month
+    prevMonth = getDateFromTimestamp(messagesList[0]['timestamp']).month
     month = 0
     valuesList = [0] #holds the ammount of text messages per month to use for dividing the wordcount later
-    for m in messagesList:
-        date = getDateFromTimestamp(m['timestamp_ms'])
+    for _, m in df.iterrows():
+        date = getDateFromTimestamp(m['timestamp'])
         key = str(date.year) +' '+ str(getMonthName(date.month))
         if 'content' in m.keys(): #check if it's a text message
             wordCount = len(m['content'].split())
@@ -256,7 +258,7 @@ def getAverageWordsPerMessagePerMonth():
         perMonthDict[k] = round(perMonthDict[k] / valuesList[month], 2)
 
     return perMonthDict
-#@returns a dict with key: sender_name | value: number:averageWords
+#@returns a dict with key: sender | value: number:averageWords
 #{ participant : averageWords }
 #@messagesPerParticipant::list holds number of messages for every participant
 #@averages::list holds the sum of words of every message for that participant
@@ -264,11 +266,11 @@ def getAverageWordsPerMessagePerMonth():
 def getAverageWordsPerMessagePerParticipant():
     messagesPerParticipant = [0] * len(participantsList)
     averages = [0] * len(participantsList)
-    for m in messagesList:
+    for _, m in df.iterrows():
         if 'content' in m.keys():
             words = m['content'].split()
-            averages[participantsList.index( m['sender_name'] )] += len(words)
-            messagesPerParticipant[participantsList.index( m['sender_name'] )] += 1
+            averages[participantsList.index( m['sender'] )] += len(words)
+            messagesPerParticipant[participantsList.index( m['sender'] )] += 1
 
     pDict = dict.fromkeys(participantsList)
     for i in range(len(participantsList)):
@@ -285,7 +287,7 @@ def getMessagesPerType(): #The types are: audio_files | photos | call_duration |
     referenceList = ["simple", "photos", "videos", "audio_files", "call_duration", "share", "gifs"]
     typesDict = dict.fromkeys(fixedTypesList, 0)
     total = 0
-    for message in messagesList:
+    for _, message in df.iterrows():
         for mType in message:
             if (mType in typesSet):
                 typesDict[fixedTypesList[referenceList.index(mType)]] += 1
@@ -309,17 +311,17 @@ def getMessagesPerTypePerParticipant():
     #creating a dict of dicts and initalizing the k:v for that dict because dict.fromkeys() returns a reference to the same object
     dictPerParticipant = {participant: {"Text messages":0, "Photos":0, "Videos":0, "Voice recordings":0, "Voice calls":0, "Shares":0, "gifs":0} for participant in participantsList}
     
-    for message in messagesList:
+    for _, message in df.iterrows():
         for mType in message: #going over the keys of the message object dict, you'd think we should access it with 'type', well yes but not every message has a type key :)
             if (mType in typesSet): #if the set contains the type then it's increment, if not then it's a text message which carries no type identifier
                 cType = fixedTypesList[referenceList.index(mType)]
-                dictPerParticipant[message['sender_name']][cType] += 1
+                dictPerParticipant[message['sender']][cType] += 1
                 add = False
                 break
             else:
                 add = True
         if (add):
-            dictPerParticipant[message['sender_name']]['Text messages'] += 1
+            dictPerParticipant[message['sender']]['Text messages'] += 1
             add = False
 
     return dictPerParticipant
@@ -329,7 +331,7 @@ def getMostCommonWords(**kwargs):
     from collections import defaultdict
     from operator import itemgetter
     words = defaultdict(lambda :0) #this is for when a new key is added, it is assigned a value of 0
-    for m in messagesList:
+    for _, m in df.iterrows():
         if 'content' in m.keys():
             temp = m['content'].split()
             for w in temp:
@@ -376,7 +378,7 @@ def dictToList(messagesFile):
     tempList = [message for message in messagesFile['messages']]
     for t in tempList: #this loop is needed for messenger's terrible choice of text encoding
         for key in t: #list of dicts { key : value }, we need to encode.decode the values
-            if key == 'sender_name' or key == 'content':
+            if key == 'sender' or key == 'content':
                 t[key] = t[key].encode('latin1').decode('utf8')
     return tempList
 
@@ -386,7 +388,7 @@ def dictToList(messagesFile):
 #increments+1 for every time the word is found
 def getWordAppearances(word):
     count = 0
-    for m in messagesList:
+    for _, m in df.iterrows():
         if ('content' in m.keys()): #needed because not every message is a text. otherwise throws KeyError
             for w in m['content'].split():
                 count = count+1 if word == w else count
@@ -547,78 +549,78 @@ participantsList = getParticipants()
 sdate = getDateFromTimestamp(df.iloc[0]['timestamp'])
 ldate = getDateFromTimestamp(df.iloc[-1]['timestamp'])
 diff = ldate - sdate
-# value = -1
-# while (value != 6):
-#     value = input("\n1. Line Graphs\n2. Bar Graphs\n3. Radar Graphs\n4. Save all to txt\n5. Change loading folder\n6. Exit\n")
-#     value = int(value)
+value = -1
+while (value != 6):
+    value = input("\n1. Line Graphs\n2. Bar Graphs\n3. Radar Graphs\n4. Save all to txt\n5. Change loading folder\n6. Exit\n")
+    value = int(value)
     
-#     if (value==1):
-#         svalue = int(input('''1. Messages Per Day\n2. Messages Per Day Per Participant\n3. Messages Per Day with Keywords
-# 4. Messages Per Month\n5. Response Time Per Message\n'''))
-#         if (svalue==1):
-#             plotme.plotLineGraph_MessagesPerDay(getMessagesPerDay())
-#         elif(svalue==2):
-#             lvalue = int(input("1. One graph\n2. Separate\n"))
-#             if (lvalue==1):
-#                 plotme.plotLineGraph_MessagesPerDayPerParticipant(getMessagesPerDayPerParticipant(), participantsList, False)
-#             elif (lvalue==2):
-#                 plotme.plotLineGraph_MessagesPerDayPerParticipant(getMessagesPerDayPerParticipant(), participantsList, True)
+    if (value==1):
+        svalue = int(input('''1. Messages Per Day\n2. Messages Per Day Per Participant\n3. Messages Per Day with Keywords
+4. Messages Per Month\n5. Response Time Per Message\n'''))
+        if (svalue==1):
+            plotme.plotLineGraph_MessagesPerDay(getMessagesPerDay())
+        elif(svalue==2):
+            lvalue = int(input("1. One graph\n2. Separate\n"))
+            if (lvalue==1):
+                plotme.plotLineGraph_MessagesPerDayPerParticipant(getMessagesPerDayPerParticipant(), participantsList, False)
+            elif (lvalue==2):
+                plotme.plotLineGraph_MessagesPerDayPerParticipant(getMessagesPerDayPerParticipant(), participantsList, True)
         
-#         elif(svalue==3):
-#             keywords = input("Enter the words you want to find with commas ',' (ex. 'bro','boi'):\n")
-#             keywords = keywords.replace(" ", "").split(',')
-#             plotme.plotLineGraph_MessagesPerDay(getMessagesPerDay(words=keywords),keywords) 
+        elif(svalue==3):
+            keywords = input("Enter the words you want to find with commas ',' (ex. 'bro','boi'):\n")
+            keywords = keywords.replace(" ", "").split(',')
+            plotme.plotLineGraph_MessagesPerDay(getMessagesPerDay(words=keywords),keywords) 
 
-#         elif(svalue==4):
-#             plotme.plotLineGraph_MessagesPerMonth(getMessagesPerMonth())
+        elif(svalue==4):
+            plotme.plotLineGraph_MessagesPerMonth(getMessagesPerMonth())
         
-#         elif(svalue==5):
-#             lvalue = int(input("Time representation:\n1. Seconds\n2. Minutes\n3. Hours"))
-#             if (lvalue==1):
-#                 plotme.plotLineGraph_TimeOfResponsePerMessage(getReponseTimePerMessage())
-#             elif (lvalue==2):
-#                 plotme.plotLineGraph_TimeOfResponsePerMessage(getReponseTimePerMessage(time='Minutes'),time='Minutes')
-#             elif (lvalue==3):
-#                 plotme.plotLineGraph_TimeOfResponsePerMessage(getReponseTimePerMessage(time='Hours'),time='Hours')
+        elif(svalue==5):
+            lvalue = int(input("Time representation:\n1. Seconds\n2. Minutes\n3. Hours"))
+            if (lvalue==1):
+                plotme.plotLineGraph_TimeOfResponsePerMessage(getReponseTimePerMessage())
+            elif (lvalue==2):
+                plotme.plotLineGraph_TimeOfResponsePerMessage(getReponseTimePerMessage(time='Minutes'),time='Minutes')
+            elif (lvalue==3):
+                plotme.plotLineGraph_TimeOfResponsePerMessage(getReponseTimePerMessage(time='Hours'),time='Hours')
 
-#     elif (value==2):
-#         svalue = int(input('''1. Messages Per Month\n2. Messages Per Month Per Participant\n3. Total Messages Per Participant
-# 4. Average Words Per Message Per Month\n5. Average Response Time Per Month\n'''))
-#         if (svalue==1):
-#             plotme.plotBarGraph_MessagesPerMonth(getMessagesPerMonth())
-#         elif (svalue==2):
-#             plotme.plotBarGraph_MessagesPerMonthPerParticipant(getMessagesPerMonthPerParticipant(),participantsList)
-#         elif (svalue==3):
-#             plotme.plotBarGraph_TotalMessages_PerParticipant(getTotalMessagesPerParticipant(True))
-#         elif (svalue==4):
-#             plotme.plotBarGraph_AveragePerMonth_General(getAverageWordsPerMessagePerMonth(),title='Words Per Message')
-#         elif (svalue==5):
-#             lvalue=int(input("Time Representation:\n1. Seconds\n2. Minutes\n3. Hours\n"))
-#             timeR = 'Minutes' if lvalue==2 else 'Hours' if lvalue == 3 else 'Seconds'
-#             plotme.plotBarGraph_MessagesPerMonth(getAverageResponseTimePerMonth(time=timeR),title='Average Response Time',time=timeR)
-#     elif (value==3): 
-#         svalue = int(input("1. Messages Per Day of the Week\n2. Messages Per Time of Day\n"))
-#         if (svalue == 1):
-#             plotme.plotSpiderGraph(getMessagesPerDayOfTheWeek())
-#         elif (svalue == 2): 
-#             plotme.plotSpiderGraph(getMessagesPerTimeOfDay())
-#     elif(value==4):
-#         saveAll(custom)
+    elif (value==2):
+        svalue = int(input('''1. Messages Per Month\n2. Messages Per Month Per Participant\n3. Total Messages Per Participant
+4. Average Words Per Message Per Month\n5. Average Response Time Per Month\n'''))
+        if (svalue==1):
+            plotme.plotBarGraph_MessagesPerMonth(getMessagesPerMonth())
+        elif (svalue==2):
+            plotme.plotBarGraph_MessagesPerMonthPerParticipant(getMessagesPerMonthPerParticipant(),participantsList)
+        elif (svalue==3):
+            plotme.plotBarGraph_TotalMessages_PerParticipant(getTotalMessagesPerParticipant(True))
+        elif (svalue==4):
+            plotme.plotBarGraph_AveragePerMonth_General(getAverageWordsPerMessagePerMonth(),title='Words Per Message')
+        elif (svalue==5):
+            lvalue=int(input("Time Representation:\n1. Seconds\n2. Minutes\n3. Hours\n"))
+            timeR = 'Minutes' if lvalue==2 else 'Hours' if lvalue == 3 else 'Seconds'
+            plotme.plotBarGraph_MessagesPerMonth(getAverageResponseTimePerMonth(time=timeR),title='Average Response Time',time=timeR)
+    elif (value==3): 
+        svalue = int(input("1. Messages Per Day of the Week\n2. Messages Per Time of Day\n"))
+        if (svalue == 1):
+            plotme.plotSpiderGraph(getMessagesPerDayOfTheWeek())
+        elif (svalue == 2): 
+            plotme.plotSpiderGraph(getMessagesPerTimeOfDay())
+    elif(value==4):
+        saveAll(input_file)
 
-#     elif (value==5): #yeah this is the way I found to return back, sue me. or maybe don't idk how the licensing for this will work yet
-#         messagesList = False
-#         while(messagesList == False):
-#             messagesList = loadFile()
-#             if (messagesList == True):
-#                 print("Thank you for using this thing!")
-#                 exit()
-#             messagesList.reverse() #the JSON files are newest first, we reverse the list to go from first to last sequentially later
-#             messagesFile = None
-#             participantsList = getParticipants()
-#             sdate = getDateFromTimestamp(messagesList[0]['timestamp_ms'])
-#             ldate = getDateFromTimestamp(messagesList[len(messagesList)-1]['timestamp_ms'])
-#             diff = ldate - sdate
-#             value = -1
-#     else:
-#         print('Thank you for using this thing! :)')
-#         exit()
+    elif (value==5): #yeah this is the way I found to return back, sue me. or maybe don't idk how the licensing for this will work yet
+        messagesList = False
+        while(messagesList == False):
+            messagesList = loadFile()
+            if (messagesList == True):
+                print("Thank you for using this thing!")
+                exit()
+            messagesList.reverse() #the JSON files are newest first, we reverse the list to go from first to last sequentially later
+            messagesFile = None
+            participantsList = getParticipants()
+            sdate = getDateFromTimestamp(messagesList[0]['timestamp'])
+            ldate = getDateFromTimestamp(messagesList[len(messagesList)-1]['timestamp'])
+            diff = ldate - sdate
+            value = -1
+    else:
+        print('Thank you for using this thing! :)')
+        exit()
